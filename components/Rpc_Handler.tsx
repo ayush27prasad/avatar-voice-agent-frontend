@@ -2,13 +2,17 @@ import { useEffect } from "react";
 import { useRoomContext } from "@livekit/components-react";
 import { toastAlert } from "@/components/alert-toast";
 
+type RpcData = {
+  payload?: string | Record<string, unknown>;
+};
+
 export function RpcHandlers() {
   const room = useRoomContext();
 
   useEffect(() => {
     if (!room) return;
 
-    const handleShowNotification = async (data: any): Promise<string> => {
+    const handleShowNotification = async (data: RpcData): Promise<string> => {
       try {
         if (!data || data.payload === undefined) {
           return "Error: Invalid RPC data format";

@@ -5,10 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "start": "next start"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.15",
