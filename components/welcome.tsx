@@ -83,7 +83,7 @@ export const Welcome = ({
       </p>
 
       {/* Name and Phone inputs */}
-      <div className="flex w-full max-w-xl gap-4 px-4">
+      <div className="flex flex-wrap w-full max-w-xl gap-4 px-4">
         {/* Name Input (Optional) */}
         <div className="flex-1 space-y-2">
           <label className="text-fg1 block text-left text-sm font-medium">
