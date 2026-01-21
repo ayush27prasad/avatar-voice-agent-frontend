@@ -13,6 +13,7 @@ import { AgentControlBar } from '@/components/livekit/agent-control-bar/agent-co
 import { ChatEntry } from '@/components/livekit/chat/chat-entry';
 import { ChatMessageView } from '@/components/livekit/chat/chat-message-view';
 import { MediaTiles } from '@/components/livekit/media-tiles';
+import { Button } from '@/components/ui/button';
 import useChatAndTranscription from '@/hooks/useChatAndTranscription';
 import { useDebugMode } from '@/hooks/useDebug';
 import type { AppConfig } from '@/lib/types';
@@ -53,6 +54,7 @@ export const SessionView = ({
   const [chatOpen, setChatOpen] = useState(false);
   const [toolEvents, setToolEvents] = useState<ToolEventPayload[]>([]);
   const [callSummary, setCallSummary] = useState<CallSummaryPayload | null>(null);
+  const [showSummaryOverlay, setShowSummaryOverlay] = useState(false);
   const { messages, send } = useChatAndTranscription();
   const room = useRoomContext();
 
@@ -114,6 +116,24 @@ export const SessionView = ({
       window.removeEventListener('lk-call-summary', handleSummary);
     };
   }, []);
+
+  // Reset state when session starts (new conversation)
+  useEffect(() => {
+    if (sessionStarted) {
+      setToolEvents([]);
+      setCallSummary(null);
+      setShowSummaryOverlay(false);
+      setChatOpen(false);
+    }
+  }, [sessionStarted]);
+
+  // Show summary overlay when summary arrives
+  useEffect(() => {
+    if (callSummary) {
+      // Show summary immediately when received
+      setShowSummaryOverlay(true);
+    }
+  }, [callSummary]);
 
   const { supportsChatInput, supportsVideoInput, supportsScreenShare } = appConfig;
   const capabilities = {
@@ -313,6 +333,81 @@ export const SessionView = ({
             </motion.div>
           </div>
         </div>
+      )}
+
+      {/* Summary Overlay - shown after call ends */}
+      {showSummaryOverlay && callSummary && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="bg-background mx-4 max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border p-8 shadow-2xl"
+          >
+            <h2 className="mb-6 text-2xl font-bold">Call Summary</h2>
+            
+            {callSummary.summary && (
+              <div className="mb-6">
+                <h3 className="text-muted-foreground mb-2 text-sm font-semibold uppercase">Summary</h3>
+                <p className="leading-relaxed">{callSummary.summary}</p>
+              </div>
+            )}
+
+            {callSummary.booked_slots && callSummary.booked_slots.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-muted-foreground mb-2 text-sm font-semibold uppercase">
+                  Booked Appointments
+                </h3>
+                <ul className="space-y-2">
+                  {callSummary.booked_slots.map((slot) => (
+                    <li key={slot} className="flex items-center gap-2">
+                      <span className="text-green-500">✓</span>
+                      <span>{slot}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {callSummary.preferences && callSummary.preferences.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-muted-foreground mb-2 text-sm font-semibold uppercase">
+                  Preferences
+                </h3>
+                <ul className="space-y-1">
+                  {callSummary.preferences.map((preference) => (
+                    <li key={preference} className="text-muted-foreground">• {preference}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {callSummary.contact_number && (
+              <div className="border-border mb-6 border-t pt-4">
+                <p className="text-muted-foreground text-sm">
+                  Contact: <span className="text-foreground font-medium">{callSummary.contact_number}</span>
+                </p>
+              </div>
+            )}
+
+            <Button
+              onClick={() => {
+                setShowSummaryOverlay(false);
+                // Disconnect and return to welcome screen
+                room.disconnect();
+              }}
+              className="mt-4 w-full"
+              variant="primary"
+              size="lg"
+            >
+              Close & Return to Welcome
+            </Button>
+          </motion.div>
+        </motion.div>
       )}
     </main>
   );

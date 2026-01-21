@@ -22,11 +22,15 @@ interface AppProps {
 export function App({ appConfig }: AppProps) {
   const room = useMemo(() => new Room(), []);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [userPhone, setUserPhone] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
   const { refreshConnectionDetails, existingOrRefreshConnectionDetails } = useConnectionDetails();
 
   useEffect(() => {
     const onDisconnected = () => {
       setSessionStarted(false);
+      setUserPhone('');
+      setUserName('');
       refreshConnectionDetails();
     };
     const onMediaDevicesError = (error: Error) => {
@@ -53,7 +57,49 @@ export function App({ appConfig }: AppProps) {
         existingOrRefreshConnectionDetails().then((connectionDetails) =>
           room.connect(connectionDetails.serverUrl, connectionDetails.participantToken)
         ),
-      ]).catch((error) => {
+      ])
+        .then(async () => {
+          if (!userPhone || aborted) return;
+
+          // Primary: set participant attributes/metadata so agent can read immediately
+          try {
+            const attributes: Record<string, string> = {
+              'user.phone': userPhone,
+            };
+            if (userName) {
+              attributes['user.name'] = userName;
+            }
+            console.log('[Frontend] Sending user data via participant attributes', {
+              phone: userPhone,
+              name: userName || null,
+            });
+            await room.localParticipant.setAttributes(attributes);
+
+            // Optional metadata mirror for redundancy
+            console.log('[Frontend] Sending user data via participant metadata', {
+              phone: userPhone,
+              name: userName || null,
+            });
+            await room.localParticipant.setMetadata(
+              JSON.stringify({ phone: userPhone, name: userName || null })
+            );
+          } catch (err) {
+            // Fallback: send a text message to lk.chat if attributes are not permitted
+            console.error('Failed to send identification data', err);
+            const identifyMessage = userName
+              ? `My phone number is ${userPhone} and my name is ${userName}`
+              : `My phone number is ${userPhone}`;
+            try {
+              console.log('[Frontend] Sending user data via lk.chat text fallback', {
+                message: identifyMessage,
+              });
+              await room.localParticipant.sendText(identifyMessage, { topic: 'lk.chat' });
+            } catch (sendErr) {
+              console.error('Failed to send identification data', sendErr);
+            }
+          }
+        })
+        .catch((error) => {
         if (aborted) {
           // Once the effect has cleaned up after itself, drop any errors
           //
@@ -82,7 +128,11 @@ export function App({ appConfig }: AppProps) {
       <MotionWelcome
         key="welcome"
         startButtonText={startButtonText}
-        onStartCall={() => setSessionStarted(true)}
+        onStartCall={(phone, name) => {
+          setUserPhone(phone);
+          setUserName(name || '');
+          setSessionStarted(true);
+        }}
         disabled={sessionStarted}
         initial={{ opacity: 0 }}
         animate={{ opacity: sessionStarted ? 0 : 1 }}

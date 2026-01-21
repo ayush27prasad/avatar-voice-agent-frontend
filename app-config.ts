@@ -2,8 +2,8 @@ import type { AppConfig } from './lib/types';
 
 export const APP_CONFIG_DEFAULTS: AppConfig = {
   companyName: 'SuperBryn',
-  pageTitle: 'Booking Assistant',
-  pageDescription: 'A booking assistant',
+  pageTitle: 'SuperBryn Booking Assistant',
+  pageDescription: 'A booking assistant for SuperBryn',
 
   supportsChatInput: true,
   supportsVideoInput: true,
